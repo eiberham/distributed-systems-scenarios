@@ -1,103 +1,54 @@
 package main
 
 import (
-	"io"
+	"context"
+	"encoding/json"
+	"fmt"
 	"net/http"
-	"sync"
+	"os"
 
-	"github.com/eiberham/distributed-systems-scenarios/multi-api-rate-limiter/internal/handlers"
-	"github.com/eiberham/distributed-systems-scenarios/multi-api-rate-limiter/internal/limiter"
-	"github.com/eiberham/distributed-systems-scenarios/multi-api-rate-limiter/internal/providers"
+	h "github.com/eiberham/distributed-systems-scenarios/multi-api-rate-limiter/internal/handlers"
+	rl "github.com/eiberham/distributed-systems-scenarios/multi-api-rate-limiter/internal/limiter"
+	"github.com/eiberham/distributed-systems-scenarios/multi-api-rate-limiter/internal/workers"
+	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v5"
 	"github.com/redis/go-redis/v9"
 )
 
 func main() {
-	e := echo.New()
+	godotenv.Load()
 
-	var wg sync.WaitGroup
+	client := redis.NewClient(&redis.Options{
+		Addr: os.Getenv("REDIS_ADDR"),
+	})
+
+	l := rl.NewRedisLimiter(client)
+
+	e := echo.New()
 
 	e.GET("/health", func(c *echo.Context) error {
 		return c.String(http.StatusOK, "Working!")
 	})
+	e.GET("/github", h.RateLimitedSearch(l, "github", 1, 5))
+	e.GET("/jira", h.RateLimitedSearch(l, "jira", 1, 5))
+	e.GET("/search", h.Search(client))
+	e.GET("/result/:job_id", func(c *echo.Context) error {
+		jobID := c.Param("job_id")
+		res, err := client.HGet(c.Request().Context(), fmt.Sprintf("job:%s", jobID), "result").Result()
+		if err == redis.Nil {
+			return c.String(http.StatusNotFound, "Job not found")
+		} else if err != nil {
+			return c.String(http.StatusInternalServerError, "Failed to fetch result")
+		}
 
-	client := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		var result []workers.SearchResult
+		if err := json.Unmarshal([]byte(res), &result); err != nil {
+			return c.String(http.StatusInternalServerError, "Failed to parse result")
+		}
+		return c.JSON(http.StatusOK, result)
 	})
 
-	limiter := limiter.NewRedisLimiter(client)
-
-	var jira = providers.NewAtlassianClient("http://localhost:8080", "atlassian-token")
-
-	var github = providers.NewGitHubClient("http://localhost:8080", "github-token")
-
-	e.GET("/github", handlers.SearchHandler(limiter, "github", 1, 5))
-	e.GET("/jira", handlers.SearchHandler(limiter, "jira", 1, 5))
-
-	e.GET("/search", func(c *echo.Context) error {
-
-		type SearchClients struct {
-			client *providers.Client
-			url    string
-		}
-
-		type SearchResult struct {
-			Client string `json:"client"`
-			Result string `json:"result"`
-		}
-
-		var clients = []SearchClients{
-			{client: &jira.Client, url: "/github"},
-			{client: &github.Client, url: "/jira"},
-		}
-
-		results := make(chan SearchResult, len(clients))
-
-		for _, sc := range clients {
-			wg.Add(1)
-			var result SearchResult
-			go func(sc SearchClients) {
-				defer wg.Done()
-				resp, err := sc.client.Get(sc.url)
-
-				if err != nil {
-					result = SearchResult{
-						Client: sc.url,
-						Result: "Error: " + err.Error(),
-					}
-				} else {
-					defer resp.Body.Close()
-					body, readErr := io.ReadAll(resp.Body)
-
-					if readErr != nil {
-						result = SearchResult{
-							Client: sc.url,
-							Result: "Error reading response: " + readErr.Error(),
-						}
-					} else {
-						result = SearchResult{
-							Client: sc.url,
-							Result: string(body),
-						}
-					}
-				}
-
-				results <- result
-			}(sc)
-		}
-
-		go func() {
-			wg.Wait()
-			close(results)
-		}()
-
-		var response []SearchResult
-		for result := range results {
-			response = append(response, result)
-		}
-
-		return c.JSON(http.StatusOK, response)
-	})
+	go workers.StartSearchWorker(context.Background(), client, l)
 
 	if err := e.Start(":8080"); err != nil {
 		e.Logger.Error("failed to start server", "error", err)
