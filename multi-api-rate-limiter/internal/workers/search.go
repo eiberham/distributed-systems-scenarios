@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"sync"
 	"time"
@@ -66,6 +67,7 @@ func StartSearchWorker(ctx context.Context, client *redis.Client, l *limiter.Red
 				jobID := message.Values["job_id"].(string)
 				if jobID != "" {
 					result := process()
+					fmt.Printf("%v\n", result)
 
 					if !Some(result, func(r SearchResult) bool { return r.Error != "" }) {
 
@@ -142,6 +144,19 @@ func process() []SearchResult {
 						Client: sc.url,
 						Result: "",
 						Error:  "Error: " + err.Error(),
+					}
+				} else if resp.StatusCode == http.StatusTooManyRequests {
+					fmt.Println("Rate limit exceeded for client:", sc.url)
+					result = SearchResult{
+						Client: sc.url,
+						Result: "",
+						Error:  "Rate limit exceeded",
+					}
+				} else if resp.StatusCode != http.StatusOK {
+					result = SearchResult{
+						Client: sc.url,
+						Result: "",
+						Error:  fmt.Sprintf("HTTP error: %d", resp.StatusCode),
 					}
 				} else {
 					result = SearchResult{

@@ -29,8 +29,8 @@ func main() {
 	e.GET("/health", func(c *echo.Context) error {
 		return c.String(http.StatusOK, "Working!")
 	})
-	e.GET("/github", h.RateLimitedSearch(l, "github", 1, 5))
-	e.GET("/jira", h.RateLimitedSearch(l, "jira", 1, 5))
+	e.GET("/github", h.RateLimitedSearch(l, "github", 0.5, 2))
+	e.GET("/jira", h.RateLimitedSearch(l, "jira", 0.5, 2))
 	e.GET("/search", h.Search(client))
 	e.GET("/result/:job_id", func(c *echo.Context) error {
 		jobID := c.Param("job_id")
