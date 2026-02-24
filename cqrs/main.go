@@ -1,4 +1,4 @@
-package cqrs
+package main
 
 import (
 	"context"
@@ -7,8 +7,8 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v5"
 	"github.com/redis/go-redis/v9"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
@@ -28,7 +28,7 @@ func main() {
 		panic("failed to connect database")
 	}
 
-	doc, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(os.Getenv("MONGODB_URI")))
+	doc, err := mongo.Connect(options.Client().ApplyURI(os.Getenv("MONGODB_URI")))
 	if err != nil {
 		panic("failed to connect to mongo")
 	}
@@ -40,17 +40,14 @@ func main() {
 		return c.String(200, "Working!")
 	})
 
-	e.GET("/orders", h.GetOrders(db))
+	e.GET("/orders", h.GetOrders(doc))
 	e.POST("/orders", h.CreateOrder(client, db))
 	e.GET("/orders/:id", func(c *echo.Context) error {
 		// Get order query
 		return c.String(200, "Order details for id: "+c.Param("id"))
 	})
 
-	e.GET("/stats", func(c *echo.Context) error {
-		// Get stats query
-		return c.String(200, "Stats data")
-	})
+	e.GET("/stats", h.GetStats())
 
 	if err := e.Start(":8080"); err != nil {
 		e.Logger.Error("failed to start server", "error", err)
