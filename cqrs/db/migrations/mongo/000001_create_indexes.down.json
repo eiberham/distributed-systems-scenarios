@@ -1,0 +1,6 @@
+[
+  {
+    "dropIndexes": "orders",
+    "index": ["idx_orders_user_id", "idx_orders_created_at"]
+  }
+]

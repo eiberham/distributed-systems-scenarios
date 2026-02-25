@@ -8,7 +8,7 @@ import (
 )
 
 type User struct {
-	Model        *gorm.Model `gorm:"embedded"`
+	gorm.Model
 	Name         string
 	Email        *string
 	Age          uint8

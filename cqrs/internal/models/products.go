@@ -3,7 +3,7 @@ package models
 import "gorm.io/gorm"
 
 type Product struct {
-	Model *gorm.Model `gorm:"embedded"`
+	gorm.Model
 	Name  string
 	Price float64
 }

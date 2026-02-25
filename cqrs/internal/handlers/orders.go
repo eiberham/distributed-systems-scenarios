@@ -43,10 +43,35 @@ func CreateOrder(client *redis.Client, db *gorm.DB) echo.HandlerFunc {
 			return c.JSON(400, map[string]string{"error": "Invalid request body"})
 		}
 
-		result := db.Create(&order)
-		if result.Error != nil {
-			return c.JSON(500, map[string]string{"error": result.Error.Error()})
+		// Use transaction to ensure atomicity between order and outbox
+		err = db.Transaction(func(tx *gorm.DB) error {
+			// 1. Create the order
+			if err := tx.Create(&order).Error; err != nil {
+				return err
+			}
+
+			// 2. Create outbox event in the same transaction
+			payload, _ := json.Marshal(order)
+			outboxEvent := models.Outbox{
+				AggregateType: "order",
+				AggregateID:   order.ID,
+				EventType:     "order_created",
+				Payload:       payload,
+			}
+			if err := tx.Create(&outboxEvent).Error; err != nil {
+				return err
+			}
+
+			return nil
+		})
+
+		if err != nil {
+			return c.JSON(500, map[string]string{"error": err.Error()})
 		}
-		return c.String(200, "Order created")
+
+		return c.JSON(201, map[string]interface{}{
+			"message":  "Order created",
+			"order_id": order.ID,
+		})
 	}
 }
