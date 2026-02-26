@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS outbox (
     aggregate_id INTEGER NOT NULL,
     event_type VARCHAR(255) NOT NULL,
     payload JSONB NOT NULL,
+    processed BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP
@@ -56,3 +57,4 @@ CREATE TABLE IF NOT EXISTS outbox (
 
 CREATE INDEX idx_outbox_event_type ON outbox(event_type);
 CREATE INDEX idx_outbox_created_at ON outbox(created_at);
+CREATE INDEX idx_outbox_unprocessed ON outbox(processed, created_at) WHERE processed = false;

@@ -13,9 +13,11 @@ import (
 	"gorm.io/gorm"
 
 	h "github.com/eiberham/distributed-systems-scenarios/cqrs/internal/handlers"
+	worker "github.com/eiberham/distributed-systems-scenarios/cqrs/internal/workers"
 )
 
 func main() {
+	// var wg sync.WaitGroup
 	godotenv.Load()
 
 	client := redis.NewClient(&redis.Options{
@@ -49,8 +51,9 @@ func main() {
 
 	e.GET("/stats", h.GetStats())
 
+	go worker.StartPollerWorker(context.Background(), db, client)
+
 	if err := e.Start(":8080"); err != nil {
 		e.Logger.Error("failed to start server", "error", err)
 	}
-
 }
