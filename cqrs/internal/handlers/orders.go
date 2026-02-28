@@ -13,7 +13,7 @@ import (
 
 func GetOrders(db *mongo.Client) echo.HandlerFunc {
 	return func(c *echo.Context) error {
-		coll := db.Database("db").Collection("orders")
+		coll := db.Database("cqrs_db").Collection("orders")
 		cursor, err := coll.Find(c.Request().Context(), map[string]interface{}{})
 		if err != nil {
 			return c.JSON(500, map[string]string{"error": "Failed to fetch orders"})
