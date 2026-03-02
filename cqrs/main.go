@@ -48,7 +48,7 @@ func main() {
 		return c.String(200, "Order details for id: "+c.Param("id"))
 	})
 
-	e.GET("/stats", h.GetStats())
+	e.GET("/stats", h.GetStats(doc))
 
 	go worker.StartPollerWorker(context.Background(), db, client)
 	go worker.StartSyncWorker(context.Background(), client, db, doc)

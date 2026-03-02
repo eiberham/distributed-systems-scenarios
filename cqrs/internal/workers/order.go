@@ -60,12 +60,12 @@ func StartSyncWorker(ctx context.Context, client *redis.Client, psql *gorm.DB, m
 							FROM orders o
 							JOIN products p ON o.product_id = p.id
 							JOIN users u ON o.user_id = u.id
-							WHERE o.id = 5`).Scan(&orders)
+							WHERE o.id = $1`, orderID).Scan(&orders)
 						if result.Error != nil {
 							println("Error fetching user:", result.Error)
 							return
 						} else if len(orders) == 0 {
-							fmt.Println("No order details found for id 5")
+							fmt.Printf("No order details found for id %s\n", orderID)
 						} else {
 							fmt.Printf("Order details: %+v\n", orders)
 						}
@@ -78,15 +78,29 @@ func StartSyncWorker(ctx context.Context, client *redis.Client, psql *gorm.DB, m
 
 						collection := mongo.Database("cqrs_db").Collection("analytics")
 
-						filter := bson.M{"date": date, "user_id": userID}
+						filter := bson.M{"date": date}
+
+						zero, _ := bson.ParseDecimal128("0")
+						setOnInsert := bson.M{
+							"total_spent": zero,
+							"order_count": 0,
+							"user_spendings." + userID: bson.M{
+								"name":  userName,
+								"total": zero,
+							},
+						}
+						_, _ = collection.UpdateOne(ctx, filter, bson.M{"$setOnInsert": setOnInsert}, options.UpdateOne().SetUpsert(true))
+
+						total, _ := bson.ParseDecimal128(fmt.Sprintf("%f", orders[0].Price*float64(orders[0].Quantity)))
+
 						update := bson.M{
 							"$inc": bson.M{
-								"order_count": 1,
-								"total_spent": orders[0].Price * float64(orders[0].Quantity),
+								"order_count":                         1,
+								"total_spent":                         total,
+								"user_spendings." + userID + ".total": total,
 							},
 							"$set": bson.M{
-								"user_id":   userID,
-								"user_name": userName,
+								"user_spendings." + userID + ".name": userName,
 							},
 						}
 
