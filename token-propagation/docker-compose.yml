@@ -1,0 +1,21 @@
+services:
+
+  keycloack:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: keycloak_token_propagation
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD}
+    ports:
+      - "8080:8080"
+    command: ["start-dev"]
+  
+  gateway:
+    ports:
+      - "8081:8081"   # exposed
+  users:
+    expose:
+      - "8082"        # internal
+  orders:
+    expose:
+      - "8083"        # internal
