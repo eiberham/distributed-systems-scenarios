@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	if err := config.Load(); err != nil {
+	if err := config.Load("services/orders/.env"); err != nil {
 		panic("failed to load config: " + err.Error())
 	}
 
@@ -25,6 +25,14 @@ func main() {
 	r.Use(echojwt.WithConfig(echojwt.Config{
 		KeyFunc: jwks.Keyfunc,
 	}))
+
+	r.GET("/orders", func(c *echo.Context) error {
+		orders := []map[string]interface{}{
+			{"id": 1, "item": "Laptop", "quantity": 1},
+			{"id": 2, "item": "Phone", "quantity": 2},
+		}
+		return c.JSON(200, orders)
+	})
 
 	if err := e.Start(":" + config.Cfg.Port); err != nil {
 		e.Logger.Error("failed to start server", "error", err)

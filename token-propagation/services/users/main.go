@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	if err := config.Load(); err != nil {
+	if err := config.Load("services/users/.env"); err != nil {
 		panic("failed to load config: " + err.Error())
 	}
 
@@ -40,8 +40,6 @@ func main() {
 		users, err := client.GetUsers()
 		if err != nil {
 			fmt.Printf("Error fetching users: %v\n", err)
-		}
-		if err != nil {
 			return c.JSON(500, map[string]string{"error": err.Error()})
 		}
 		return c.JSON(200, users)

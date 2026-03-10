@@ -1,4 +1,6 @@
-FROM golang:1.20-alpine
+FROM golang:1.23-alpine
+
+ENV GOTOOLCHAIN=auto
 
 WORKDIR /app
 
@@ -7,7 +9,8 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o main .
+RUN go build -o orders ./services/orders
+
 EXPOSE 8083
 
-CMD ["./main"]
+CMD ["./orders"]
