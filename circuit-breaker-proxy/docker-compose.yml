@@ -1,0 +1,30 @@
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: services/gateway/Dockerfile
+    env_file:
+      - ./services/gateway/.env
+    container_name: gateway_service
+    ports:
+      - "8081:8081"
+
+  cart:
+    build:
+      context: .
+      dockerfile: services/cart/Dockerfile
+    env_file:
+      - ./services/cart/.env
+    container_name: cart_service
+    ports:
+      - "8082:8082"
+
+  products:
+    build:
+      context: .
+      dockerfile: services/products/Dockerfile
+    env_file:
+      - ./services/products/.env
+    container_name: products_service
+    ports:
+      - "8083:8083"
