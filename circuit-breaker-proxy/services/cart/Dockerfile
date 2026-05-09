@@ -11,6 +11,6 @@ COPY . .
 
 RUN go build -o cart ./services/cart
 
-EXPOSE 8083
+EXPOSE 8082
 
 CMD ["./cart"]

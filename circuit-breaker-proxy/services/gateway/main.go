@@ -35,7 +35,7 @@ func main() {
 	routes.GET("/products", func(c *echo.Context) error {
 
 		response, err := prod.Run(func() (interface{}, error) {
-			resp, e := http.Get("http://products:8083/products")
+			resp, e := http.Get("http://products:8083/api/products")
 			if e != nil {
 				return nil, e
 			}
@@ -59,7 +59,7 @@ func main() {
 
 	routes.GET("/cart", func(c *echo.Context) error {
 		response, err := cart.Run(func() (interface{}, error) {
-			resp, e := http.Get("http://cart:8082/cart")
+			resp, e := http.Get("http://cart:8082/api/cart")
 			if e != nil {
 				return nil, e
 			}

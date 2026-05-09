@@ -17,6 +17,11 @@ func main() {
 		return c.String(200, "Working!")
 	})
 
+	routes := e.Group("/api")
+	routes.GET("/cart", func(c *echo.Context) error {
+		return c.String(200, "Cart endpoint")
+	})
+
 	if err := e.Start(":" + config.Cfg.Port); err != nil {
 		e.Logger.Error("failed to start server", "error", err)
 	}
