@@ -2,6 +2,8 @@ package main
 
 import (
 	"circuit-breaker-proxy/internal/config"
+	m "circuit-breaker-proxy/internal/middleware"
+	"os"
 
 	"github.com/labstack/echo/v5"
 )
@@ -18,6 +20,11 @@ func main() {
 	})
 
 	routes := e.Group("/api")
+
+	if os.Getenv("SIMULATE_FAILURE") == "true" {
+		routes.Use(m.FailureSimulatorMiddleware())
+	}
+
 	routes.GET("/cart", func(c *echo.Context) error {
 		return c.String(200, "Cart endpoint")
 	})
